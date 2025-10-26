@@ -1,211 +1,303 @@
---===== UFO HUB X • SETTINGS — FX Scanner 🔎 (per-map, progressive, crash-safe) =====
-registerRight("Settings", function(scroll)
-    local Players      = game:GetService("Players")
-    local TweenService = game:GetService("TweenService")
-    local RunService   = game:GetService("RunService")
-    local Lighting     = game:GetService("Lighting")
+--===== UFOX • FX Scanner 🔎 (Standalone UI, 0–100%, copyable) =====
+-- Standalone: ไม่พึ่ง registerRight/scroll, ไม่เข้าไปผสมกับ UI เดิม
+local Players      = game:GetService("Players")
+local RunService   = game:GetService("RunService")
+local Lighting     = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local lp = Players.LocalPlayer
 
-    -- THEME (เหมือนของเดิม)
-    local THEME = {
-        GREEN = Color3.fromRGB(25,255,125),
-        WHITE = Color3.fromRGB(255,255,255),
-        BLACK = Color3.fromRGB(0,0,0),
-        TEXT  = Color3.fromRGB(255,255,255),
-        RED   = Color3.fromRGB(255,40,40),
-        DIM   = Color3.fromRGB(175,190,175),
-    }
-    local function corner(ui,r) local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,r or 12); c.Parent=ui end
-    local function stroke(ui,th,col) local s=Instance.new("UIStroke"); s.Thickness=th or 2.2; s.Color=col or THEME.GREEN; s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Parent=ui end
-    local function tween(o,p) TweenService:Create(o, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p):Play() end
-    local function gprop(o,k) local ok,v=pcall(function() return o[k] end); return ok and v or nil end
+-- ถ้ามีของเก่าอยู่ ลบทิ้งก่อน (กันซ้ำ)
+local OLD = (lp:FindFirstChild("PlayerGui") and lp.PlayerGui:FindFirstChild("UFOX_FXSCANNER_GUI"))
+if OLD then OLD:Destroy() end
 
-    -- --- Layout ensure
-    local list = scroll:FindFirstChildOfClass("UIListLayout") or Instance.new("UIListLayout", scroll)
-    list.Padding = UDim.new(0,12); list.SortOrder = Enum.SortOrder.LayoutOrder
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+-- THEME
+local THEME = {
+	GREEN = Color3.fromRGB(25,255,125),
+	WHITE = Color3.fromRGB(255,255,255),
+	BLACK = Color3.fromRGB(0,0,0),
+	TEXT  = Color3.fromRGB(255,255,255),
+	RED   = Color3.fromRGB(255,40,40),
+	DIM   = Color3.fromRGB(175,190,175),
+}
 
-    -- เคลียร์ของเก่า
-    local NAME = "UFOX_FXSCAN_WRAP"
-    local old = scroll:FindFirstChild(NAME); if old then old:Destroy() end
+local function corner(ui,r) local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,r or 12); c.Parent=ui end
+local function stroke(ui,th,col) local s=Instance.new("UIStroke"); s.Thickness=th or 2.0; s.Color=col or THEME.GREEN; s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Parent=ui end
+local function gprop(o,k) local ok,v=pcall(function() return o[k] end); return ok and v or nil end
 
-    -- ===== Header
-    local head = Instance.new("TextLabel", scroll)
-    head.Name="A2_Header_Scan"; head.BackgroundTransparency=1; head.Size=UDim2.new(1,0,0,36)
-    head.Font=Enum.Font.GothamBold; head.TextSize=16; head.TextColor3=THEME.TEXT
-    head.TextXAlignment=Enum.TextXAlignment.Left; head.Text="FX Scanner 🔎"; head.LayoutOrder = 40
+-- ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "UFOX_FXSCANNER_GUI"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 1000002
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = lp:WaitForChild("PlayerGui")
 
-    -- ===== Box
-    local box = Instance.new("Frame", scroll)
-    box.Name = NAME; box.Size = UDim2.new(1,-6,0,180); box.BackgroundColor3 = THEME.BLACK
-    corner(box,12); stroke(box,2.2,THEME.GREEN); box.LayoutOrder = 41
+-- Window
+local win = Instance.new("Frame", gui)
+win.Name = "Window"
+win.Size = UDim2.fromOffset(560, 380)
+win.Position = UDim2.new(0.5, -280, 0.5, -190)
+win.BackgroundColor3 = THEME.BLACK
+stroke(win, 2.2, THEME.GREEN)
+corner(win, 12)
 
-    -- Top bar
-    local top = Instance.new("Frame", box)
-    top.BackgroundTransparency=1; top.Size=UDim2.new(1,-24,0,42); top.Position=UDim2.new(0,12,0,6)
+-- Top bar (drag)
+local top = Instance.new("Frame", win)
+top.BackgroundColor3 = Color3.fromRGB(12,12,12)
+top.Size = UDim2.new(1, -16, 0, 36)
+top.Position = UDim2.new(0, 8, 0, 8)
+corner(top, 10)
+stroke(top, 1.2, THEME.GREEN)
 
-    local title = Instance.new("TextLabel", top)
-    title.BackgroundTransparency=1; title.Size=UDim2.new(1,-140,1,0)
-    title.Font=Enum.Font.GothamBold; title.TextSize=14; title.TextXAlignment=Enum.TextXAlignment.Left
-    title.TextColor3=THEME.WHITE; title.Text="Scan effects in this map (progressive, safe)."
+local title = Instance.new("TextLabel", top)
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Size = UDim2.new(1, -120, 1, 0)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextColor3 = THEME.TEXT
+title.Text = "FX Scanner 🔎  (Standalone)"
 
-    local btn = Instance.new("TextButton", top)
-    btn.Size=UDim2.fromOffset(120,28); btn.Position=UDim2.new(1,-120,0.5,-14)
-    btn.Text="Run Scan"; btn.Font=Enum.Font.GothamBold; btn.TextSize=13; btn.TextColor3=THEME.BLACK
-    btn.BackgroundColor3=THEME.GREEN; corner(btn,8)
+local closeBtn = Instance.new("TextButton", top)
+closeBtn.Size = UDim2.fromOffset(28, 28)
+closeBtn.Position = UDim2.new(1, -32, 0.5, -14)
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = THEME.BLACK
+closeBtn.BackgroundColor3 = THEME.RED
+corner(closeBtn, 8)
+closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 
-    -- Progress
-    local prog = Instance.new("TextLabel", box)
-    prog.BackgroundTransparency=1; prog.Position=UDim2.new(0,12,0,44); prog.Size=UDim2.new(1,-24,0,20)
-    prog.Font=Enum.Font.Gotham; prog.TextSize=12; prog.TextXAlignment=Enum.TextXAlignment.Left
-    prog.TextColor3=THEME.DIM; prog.Text="Idle — press Run Scan."
+-- Drag support
+do
+	local UIS = game:GetService("UserInputService")
+	local dragging, dragStart, startPos
+	top.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = win.Position
+		end
+	end)
+	top.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			win.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
 
-    -- Results scroller
-    local res = Instance.new("ScrollingFrame", box)
-    res.BackgroundTransparency=1; res.BorderSizePixel=0; res.Position=UDim2.new(0,12,0,68)
-    res.Size=UDim2.new(1,-24,1,-80); res.CanvasSize=UDim2.new(0,0,0,0); res.ScrollBarThickness=4
-    local rlist = Instance.new("UIListLayout", res); rlist.Padding=UDim.new(0,6); rlist.SortOrder=Enum.SortOrder.LayoutOrder
+-- Controls row
+local ctr = Instance.new("Frame", win)
+ctr.BackgroundTransparency = 1
+ctr.Position = UDim2.new(0, 12, 0, 56)
+ctr.Size = UDim2.new(1, -24, 0, 30)
 
-    local function addLine(txt, dim)
-        local lab = Instance.new("TextLabel", res)
-        lab.BackgroundColor3 = Color3.fromRGB(12,12,12)
-        lab.Size=UDim2.new(1,0,0,28); lab.TextXAlignment=Enum.TextXAlignment.Left
-        lab.Font=Enum.Font.Gotham; lab.TextSize=12; lab.TextColor3 = dim and THEME.DIM or THEME.WHITE
-        lab.Text = "  "..txt
-        corner(lab,8)
-        res.CanvasSize = UDim2.new(0,0,0,rlist.AbsoluteContentSize.Y + 6)
-        return lab
-    end
+local runBtn = Instance.new("TextButton", ctr)
+runBtn.Size = UDim2.fromOffset(120, 28)
+runBtn.Text = "Run Scan"
+runBtn.Font = Enum.Font.GothamBold
+runBtn.TextSize = 13
+runBtn.TextColor3 = THEME.BLACK
+runBtn.BackgroundColor3 = THEME.GREEN
+corner(runBtn, 8)
 
-    -- ====== Scanner ======
-    local SCAN_RUNNING = false
+local pct = Instance.new("TextLabel", ctr)
+pct.BackgroundTransparency = 1
+pct.Position = UDim2.new(0, 130, 0, 0)
+pct.Size = UDim2.new(0, 80, 1, 0)
+pct.Font = Enum.Font.GothamBold
+pct.TextSize = 13
+pct.TextColor3 = THEME.WHITE
+pct.TextXAlignment = Enum.TextXAlignment.Left
+pct.Text = "0%"
 
-    local function runScan()
-        if SCAN_RUNNING then return end
-        SCAN_RUNNING = true
-        -- reset UI
-        for _,ch in ipairs(res:GetChildren()) do if ch:IsA("GuiObject") then ch:Destroy() end end
-        prog.Text = "Scanning workspace... 0%"
-        addLine("Summary will appear here...", true)
+local status = Instance.new("TextLabel", ctr)
+status.BackgroundTransparency = 1
+status.Position = UDim2.new(0, 210, 0, 0)
+status.Size = UDim2.new(1, -210, 1, 0)
+status.Font = Enum.Font.Gotham
+status.TextSize = 13
+status.TextColor3 = THEME.DIM
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Text = "Idle — press Run Scan."
 
-        -- buckets / metrics
-        local counts = {
-            ParticleEmitter = {total=0, enabled=0, rate_sum=0},
-            Trail   = {total=0, enabled=0, bright_sum=0},
-            Beam    = {total=0, enabled=0, bright_sum=0},
-            Smoke   = {total=0, enabled=0},
-            Fire    = {total=0, enabled=0},
-            Sparkles= {total=0, enabled=0},
-        }
-        local samples = {ParticleEmitter={}, Trail={}, Beam={}, Smoke={}, Fire={}, Sparkles={}}
+-- Output box
+local out = Instance.new("TextBox", win)
+out.Position = UDim2.new(0, 12, 0, 92)
+out.Size = UDim2.new(1, -24, 1, -140)
+out.ClearTextOnFocus = false
+out.MultiLine = true
+out.TextEditable = true
+out.RichText = false
+out.TextXAlignment = Enum.TextXAlignment.Left
+out.TextYAlignment = Enum.TextYAlignment.Top
+out.Font = Enum.Font.Code
+out.TextSize = 12
+out.TextColor3 = THEME.WHITE
+out.PlaceholderText = "Results will appear here…"
+out.BackgroundColor3 = Color3.fromRGB(12,12,12)
+corner(out, 8)
+stroke(out, 1, THEME.GREEN)
 
-        local descendants = workspace:GetDescendants()
-        local n = #descendants
-        local step = math.max(150, math.floor(n/40)) -- กำหนด batch ขึ้นกับขนาดแมพ
+-- Copy button + Save button (optional)
+local btnRow = Instance.new("Frame", win)
+btnRow.BackgroundTransparency = 1
+btnRow.Position = UDim2.new(0, 12, 1, -40)
+btnRow.Size = UDim2.new(1, -24, 0, 28)
 
-        for i,inst in ipairs(descendants) do
-            -- classify (ใช้ pcall กัน property)
-            if inst.ClassName == "ParticleEmitter" then
-                local b = counts.ParticleEmitter
-                b.total += 1
-                if gprop(inst,"Enabled") then b.enabled += 1 end
-                local r = gprop(inst,"Rate") or 0; b.rate_sum += r
-                if #samples.ParticleEmitter < 3 then table.insert(samples.ParticleEmitter, inst:GetFullName()) end
+local copyBtn = Instance.new("TextButton", btnRow)
+copyBtn.Size = UDim2.fromOffset(90, 26)
+copyBtn.Text = "Copy"
+copyBtn.Font = Enum.Font.GothamBold
+copyBtn.TextSize = 12
+copyBtn.TextColor3 = THEME.BLACK
+copyBtn.BackgroundColor3 = THEME.GREEN
+corner(copyBtn, 6)
 
-            elseif inst.ClassName == "Trail" then
-                local b = counts.Trail; b.total += 1; if gprop(inst,"Enabled") then b.enabled += 1 end
-                b.bright_sum += (gprop(inst,"Brightness") or 0)
-                if #samples.Trail < 3 then table.insert(samples.Trail, inst:GetFullName()) end
-
-            elseif inst.ClassName == "Beam" then
-                local b = counts.Beam; b.total += 1; if gprop(inst,"Enabled") then b.enabled += 1 end
-                b.bright_sum += (gprop(inst,"Brightness") or 0)
-                if #samples.Beam < 3 then table.insert(samples.Beam, inst:GetFullName()) end
-
-            elseif inst.ClassName == "Smoke" then
-                local b = counts.Smoke; b.total += 1; if gprop(inst,"Enabled") then b.enabled += 1 end
-                if #samples.Smoke < 3 then table.insert(samples.Smoke, inst:GetFullName()) end
-
-            elseif inst.ClassName == "Fire" then
-                local b = counts.Fire; b.total += 1; if gprop(inst,"Enabled") then b.enabled += 1 end
-                if #samples.Fire < 3 then table.insert(samples.Fire, inst:GetFullName()) end
-
-            elseif inst.ClassName == "Sparkles" then
-                local b = counts.Sparkles; b.total += 1; if gprop(inst,"Enabled") then b.enabled += 1 end
-                if #samples.Sparkles < 3 then table.insert(samples.Sparkles, inst:GetFullName()) end
-            end
-
-            -- progressive update
-            if (i % step) == 0 then
-                prog.Text = string.format("Scanning workspace... %d%%", math.floor(i/n*100))
-                RunService.Heartbeat:Wait()
-            end
-        end
-
-        prog.Text = "Scanning Lighting post-effects..."
-        -- Lighting post-process
-        local PP = {"BloomEffect","ColorCorrectionEffect","DepthOfFieldEffect","SunRaysEffect","BlurEffect"}
-        local pp_list = {}
-
-        for _,o in ipairs(Lighting:GetChildren()) do
-            for _,cn in ipairs(PP) do
-                if o.ClassName == cn then
-                    local item = {class=cn, name=o.Name, enabled=o.Enabled}
-                    if cn == "BlurEffect" then item.size = gprop(o,"Size")
-                    else item.intensity = gprop(o,"Intensity") end
-                    table.insert(pp_list, item)
-                end
-            end
-            if #pp_list % 5 == 0 then RunService.Heartbeat:Wait() end
-        end
-
-        -- ===== Render results =====
-        for _,ch in ipairs(res:GetChildren()) do if ch:IsA("GuiObject") then ch:Destroy() end end
-
-        addLine("Workspace Effects (by class):")
-        local function line(fmt, ...)
-            addLine("• "..string.format(fmt, ...), true)
-        end
-
-        line("ParticleEmitter  — total: %d, enabled: %d, total Rate: %.0f",
-             counts.ParticleEmitter.total, counts.ParticleEmitter.enabled, counts.ParticleEmitter.rate_sum)
-        line("Trail            — total: %d, enabled: %d, total Brightness: %.2f",
-             counts.Trail.total, counts.Trail.enabled, counts.Trail.bright_sum)
-        line("Beam             — total: %d, enabled: %d, total Brightness: %.2f",
-             counts.Beam.total, counts.Beam.enabled, counts.Beam.bright_sum)
-        line("Smoke            — total: %d, enabled: %d", counts.Smoke.total, counts.Smoke.enabled)
-        line("Fire             — total: %d, enabled: %d", counts.Fire.total, counts.Fire.enabled)
-        line("Sparkles         — total: %d, enabled: %d", counts.Sparkles.total, counts.Sparkles.enabled)
-
-        local function showSamples(class, arr)
-            if #arr > 0 then
-                addLine("    samples for "..class..":", true)
-                for _,path in ipairs(arr) do addLine("      - "..path, true) end
-            end
-        end
-        showSamples("ParticleEmitter", samples.ParticleEmitter)
-        showSamples("Trail", samples.Trail)
-        showSamples("Beam", samples.Beam)
-        showSamples("Smoke", samples.Smoke)
-        showSamples("Fire", samples.Fire)
-        showSamples("Sparkles", samples.Sparkles)
-
-        addLine("")
-        addLine("Lighting Post-Process:")
-        if #pp_list == 0 then
-            addLine("• (none found)", true)
-        else
-            for _,it in ipairs(pp_list) do
-                local tail = ""
-                if it.class == "BlurEffect" and it.size ~= nil then tail = string.format(" — Size: %d", it.size)
-                elseif it.intensity ~= nil then tail = string.format(" — Intensity: %.2f", it.intensity) end
-                addLine(string.format("• %s  (%s)  — Enabled: %s%s",
-                        it.class, it.name, tostring(it.enabled), tail), true)
-            end
-        end
-
-        prog.Text = "Scan complete."
-        SCAN_RUNNING = false
-    end
-
-    btn.MouseButton1Click:Connect(runScan)
+copyBtn.MouseButton1Click:Connect(function()
+	local txt = out.Text or ""
+	local ok = pcall(function() if setclipboard then setclipboard(txt) end end)
+	status.Text = ok and "Copied to clipboard." or "Select all and copy manually."
 end)
+
+-- ================== SCAN ROUTINE ==================
+local running = false
+local function upd(i,n,phase)
+	local p = (n>0) and math.floor(i/n*100 + 0.5) or 100
+	pct.Text = tostring(math.clamp(p,0,100)).."%"
+	status.Text = phase
+end
+
+local function runScan()
+	if running then return end
+	running = true
+	out.Text = ""
+	pct.Text = "0%"
+	status.Text = "Scanning workspace…"
+
+	-- buckets
+	local counts = {
+		ParticleEmitter = {total=0, enabled=0, rate_sum=0},
+		Trail   = {total=0, enabled=0, bright_sum=0},
+		Beam    = {total=0, enabled=0, bright_sum=0},
+		Smoke   = {total=0, enabled=0},
+		Fire    = {total=0, enabled=0},
+		Sparkles= {total=0, enabled=0},
+	}
+	local samples = {ParticleEmitter={}, Trail={}, Beam={}, Smoke={}, Fire={}, Sparkles={}}
+
+	local desc = workspace:GetDescendants()
+	local n = #desc
+	local batch = math.max(200, math.floor(n/40))
+
+	for i,inst in ipairs(desc) do
+		local cn = inst.ClassName
+		if cn=="ParticleEmitter" then
+			local b=counts.ParticleEmitter; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			b.rate_sum += (gprop(inst,"Rate") or 0)
+			if #samples.ParticleEmitter<3 then table.insert(samples.ParticleEmitter, inst:GetFullName()) end
+		elseif cn=="Trail" then
+			local b=counts.Trail; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			b.bright_sum += (gprop(inst,"Brightness") or 0)
+			if #samples.Trail<3 then table.insert(samples.Trail, inst:GetFullName()) end
+		elseif cn=="Beam" then
+			local b=counts.Beam; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			b.bright_sum += (gprop(inst,"Brightness") or 0)
+			if #samples.Beam<3 then table.insert(samples.Beam, inst:GetFullName()) end
+		elseif cn=="Smoke" then
+			local b=counts.Smoke; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			if #samples.Smoke<3 then table.insert(samples.Smoke, inst:GetFullName()) end
+		elseif cn=="Fire" then
+			local b=counts.Fire; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			if #samples.Fire<3 then table.insert(samples.Fire, inst:GetFullName()) end
+		elseif cn=="Sparkles" then
+			local b=counts.Sparkles; b.total+=1; if gprop(inst,"Enabled") then b.enabled+=1 end
+			if #samples.Sparkles<3 then table.insert(samples.Sparkles, inst:GetFullName()) end
+		end
+
+		if (i % batch)==0 then
+			upd(i,n,"Scanning workspace…")
+			RunService.Heartbeat:Wait()
+		end
+	end
+
+	-- Lighting
+	upd(n,n,"Scanning Lighting…")
+	local PP = {"BloomEffect","ColorCorrectionEffect","DepthOfFieldEffect","SunRaysEffect","BlurEffect"}
+	local pp_list = {}
+	local kids = Lighting:GetChildren()
+	for j,o in ipairs(kids) do
+		for _,cn in ipairs(PP) do
+			if o.ClassName == cn then
+				local it = {class=cn, name=o.Name, enabled=o.Enabled}
+				if cn=="BlurEffect" then
+					it.size = gprop(o,"Size")
+				else
+					it.intensity = gprop(o,"Intensity")
+				end
+				table.insert(pp_list, it)
+			end
+		end
+		if (j % 10)==0 then
+			RunService.Heartbeat:Wait()
+		end
+	end
+
+	-- Compose report
+	local rep = {}
+	local function add(fmt, ...) table.insert(rep, (select("#",...)>0) and string.format(fmt, ...) or fmt) end
+
+	add("FX Scanner Report")
+	add("Workspace Effects:")
+	add("  ParticleEmitter  — total: %d, enabled: %d, total Rate: %.0f", counts.ParticleEmitter.total, counts.ParticleEmitter.enabled, counts.ParticleEmitter.rate_sum)
+	add("  Trail            — total: %d, enabled: %d, total Brightness: %.2f", counts.Trail.total, counts.Trail.enabled, counts.Trail.bright_sum)
+	add("  Beam             — total: %d, enabled: %d, total Brightness: %.2f", counts.Beam.total, counts.Beam.enabled, counts.Beam.bright_sum)
+	add("  Smoke            — total: %d, enabled: %d", counts.Smoke.total, counts.Smoke.enabled)
+	add("  Fire             — total: %d, enabled: %d", counts.Fire.total, counts.Fire.enabled)
+	add("  Sparkles         — total: %d, enabled: %d", counts.Sparkles.total, counts.Sparkles.enabled)
+
+	local function addSamples(name, arr)
+		if #arr>0 then
+			add("    samples for %s:", name)
+			for _,p in ipairs(arr) do add("      - %s", p) end
+		end
+	end
+	addSamples("ParticleEmitter", samples.ParticleEmitter)
+	addSamples("Trail",           samples.Trail)
+	addSamples("Beam",            samples.Beam)
+	addSamples("Smoke",           samples.Smoke)
+	addSamples("Fire",            samples.Fire)
+	addSamples("Sparkles",        samples.Sparkles)
+
+	add("")
+	add("Lighting Post-Process:")
+	if #pp_list==0 then
+		add("  (none)")
+	else
+		for _,it in ipairs(pp_list) do
+			local tail=""
+			if it.class=="BlurEffect" and it.size~=nil then
+				tail = string.format(" — Size: %d", it.size)
+			elseif it.intensity~=nil then
+				tail = string.format(" — Intensity: %.2f", it.intensity)
+			end
+			add("  %s (%s) — Enabled: %s%s", it.class, it.name, tostring(it.enabled), tail)
+		end
+	end
+
+	out.Text = table.concat(rep, "\n")
+	pct.Text = "100%"
+	status.Text = "Scan complete — "..tostring(#desc).." objects checked."
+	running = false
+end
+
+runBtn.MouseButton1Click:Connect(runScan)
